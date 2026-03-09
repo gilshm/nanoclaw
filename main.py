@@ -123,9 +123,15 @@ def process_assistant_response(response: Any) -> tuple[list[dict[str, Any]], Con
             assistant_content.append({
                 "type": "thinking",
                 "thinking": block.thinking,
+                # signature is required when passing thinking blocks back in history.
+                # The API uses it to verify the block wasn't tampered with between turns.
+                # Omitting it will cause an API error.
                 "signature": block.signature
             })
         elif block.type == "tool_use":
+            # Note: Claude can return multiple tool_use blocks in one response.
+            # This agent only executes the last one found — a simplification for clarity.
+            # A production agent would collect all of them and execute each in turn.
             tool_use_block = block
             assistant_content.append({
                 "type": "tool_use",
@@ -150,10 +156,16 @@ def initialize_conversation(memory: MemoryManager) -> list[dict[str, Any]]:
         Initial messages list with memory context
     """
     mem_context = memory.get_context_string()
-    init_message = (
-        f"System Initialization: {mem_context}\n"
-        "Please acknowledge what you remember and wait for my command."
-    )
+
+    # get_context_string() returns "" when there are no memories yet,
+    # so we only include the memory block when it's non-empty.
+    if mem_context:
+        init_message = (
+            f"System Initialization: {mem_context}\n"
+            "Please acknowledge what you remember and wait for my command."
+        )
+    else:
+        init_message = "System Initialization: You have no stored memories yet. Wait for my command."
 
     return [{"role": "user", "content": init_message}]
 
@@ -175,10 +187,12 @@ def main_loop() -> None:
     tools = ToolBox(config=config)
     memory = MemoryManager(config=config)
 
-    # Combine tool schemas
-    all_tools = get_tools_schema() + [get_memory_schema()]
+    # Combine tool schemas — both functions return lists, so we can simply concatenate
+    all_tools = get_tools_schema() + get_memory_schema()
 
-    # Initialize conversation with memory
+    # Initialize conversation with memory.
+    # Note: this list grows unboundedly. In production you'd need to trim it
+    # or summarize old turns to stay within the model's context window.
     messages = initialize_conversation(memory)
 
     # Display welcome message
@@ -206,6 +220,9 @@ def main_loop() -> None:
         messages.append({"role": "user", "content": user_input})
 
         # Agentic loop: think → act → observe → repeat
+        # stop_reason tells us why Claude stopped generating:
+        #   "tool_use"  → Claude wants to call a tool; feed the result back and continue
+        #   "end_turn"  → Claude is done; break out and wait for the next user message
         while True:
             response = engine.get_response(messages, all_tools)
 
@@ -216,7 +233,7 @@ def main_loop() -> None:
             messages.append({"role": "assistant", "content": assistant_content})
 
             # Handle tool execution
-            if tool_use_block:
+            if response.stop_reason == "tool_use" and tool_use_block:
                 result = execute_tool(
                     tool_use_block.name,
                     tool_use_block.input,

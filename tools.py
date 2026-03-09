@@ -46,6 +46,11 @@ class ToolBox:
         logger.info(f"Executing bash command: {command}")
 
         try:
+            # shell=True passes the command to /bin/sh, enabling pipes (|),
+            # redirects (>), globs (*.py), and chaining (&&).
+            # This is intentionally unrestricted for educational purposes.
+            # In production, shell=True with unsanitized input is a security risk
+            # (command injection). Consider shell=False with a validated arg list instead.
             process = subprocess.run(
                 command,
                 shell=True,

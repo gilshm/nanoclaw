@@ -96,14 +96,14 @@ class MemoryManager:
         return context
 
 
-def get_memory_schema() -> dict[str, Any]:
+def get_memory_schema() -> list[dict[str, Any]]:
     """
     Get the memory tool schema definition for Claude.
 
     Returns:
-        Tool definition in Anthropic format
+        List containing the tool definition in Anthropic format
     """
-    return {
+    return [{
         "name": "save_to_memory",
         "description": (
             "Save important information to persistent memory. "
@@ -120,4 +120,4 @@ def get_memory_schema() -> dict[str, Any]:
             },
             "required": ["info"]
         }
-    }
+    }]
