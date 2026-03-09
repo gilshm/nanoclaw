@@ -23,4 +23,5 @@ class Config:
     exit_commands: tuple[str, ...] = ("exit", "quit")
 
     # Logging
+    # Set to "DEBUG" to see raw LLM responses, detailed execution flow, and token usage
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"

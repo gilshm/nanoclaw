@@ -56,6 +56,7 @@ Edit `config.py` to customize:
 - **Timeouts**: Set bash command timeout
 - **Memory file**: Change storage location
 - **Exit commands**: Customize quit commands
+- **Log level**: Set to `"DEBUG"` to see raw LLM responses, token usage, and detailed execution flow
 
 ## Related
 

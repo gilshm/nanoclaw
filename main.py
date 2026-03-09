@@ -23,7 +23,15 @@ console = Console()
 
 
 def setup_logging(config: Config) -> None:
-    """Configure logging for the application."""
+    """
+    Configure logging for the application.
+
+    Set log_level to DEBUG in config.py to see:
+    - Detailed execution flow
+    - Raw LLM responses and content blocks
+    - Token usage statistics
+    - Memory operations
+    """
     logging.basicConfig(
         level=getattr(logging, config.log_level),
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

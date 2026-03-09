@@ -55,4 +55,16 @@ class ClaudeEngine:
         )
 
         logger.debug(f"Received response with {len(response.content)} content blocks")
+
+        # Log raw response at DEBUG level
+        logger.debug(f"Raw response stop_reason: {response.stop_reason}")
+        logger.debug(f"Raw response usage: {response.usage}")
+        for i, block in enumerate(response.content):
+            if block.type == "thinking":
+                logger.debug(f"Block {i} [thinking]: {block.thinking}")
+            elif block.type == "tool_use":
+                logger.debug(f"Block {i} [tool_use]: name={block.name}, input={block.input}")
+            elif block.type == "text":
+                logger.debug(f"Block {i} [text]: {block.text}")
+
         return response
