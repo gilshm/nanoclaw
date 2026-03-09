@@ -1,49 +1,101 @@
+"""Tool implementations for bash command execution."""
+
 import subprocess
+import logging
+from typing import Any
+
+from config import Config
+
+logger = logging.getLogger(__name__)
+
+
+class BashExecutionError(Exception):
+    """Raised when bash command execution fails."""
+    pass
 
 
 class ToolBox:
-    def __init__(self):
-        pass
+    """Container for all available tools."""
+
+    def __init__(self, config: Config) -> None:
+        """
+        Initialize the toolbox.
+
+        Args:
+            config: Application configuration
+        """
+        self.config = config
+        logger.info("ToolBox initialized")
 
     def execute_bash(self, command: str) -> str:
         """
-        Executes a standard Linux terminal command and returns the output.
-        Designed for grep, ls, cat, etc.
+        Execute a bash command and return the output.
+
+        Designed for standard commands like ls, grep, cat, etc.
+        Supports pipes and redirects via shell=True.
+
+        Args:
+            command: The bash command to execute
+
+        Returns:
+            Combined stdout and stderr output, or success message if empty
+
+        Raises:
+            BashExecutionError: If command times out or fails unexpectedly
         """
+        logger.info(f"Executing bash command: {command}")
+
         try:
-            # shell=True allows for pipes (|) and redirects (>)
-            # capture_output=True grabs both stdout and stderr
             process = subprocess.run(
-                command, 
-                shell=True, 
-                capture_output=True, 
-                text=True, 
-                timeout=15
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=self.config.bash_timeout
             )
-            
-            # Combine output and errors so the AI sees the full context
+
+            # Combine output so AI sees full context
             result = process.stdout + process.stderr
-            return result if result.strip() else "Success (no output)."
-            
+            output = result.strip() if result.strip() else "Success (no output)."
+
+            logger.debug(f"Command completed with output length: {len(output)}")
+            return output
+
         except subprocess.TimeoutExpired:
-            return "Error: Command timed out after 15 seconds."
+            error_msg = f"Command timed out after {self.config.bash_timeout} seconds"
+            logger.error(error_msg)
+            return f"Error: {error_msg}"
+
         except Exception as e:
+            error_msg = f"Execution failed: {str(e)}"
+            logger.error(error_msg)
             return f"System Error: {str(e)}"
 
 
-TOOLS_SCHEMA = [
-    {
-        "name": "execute_bash",
-        "description": "Run a bash command to see files, search text with grep, or check system status.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "command": {
-                    "type": "string", 
-                    "description": "The full bash command to execute."
-                }
-            },
-            "required": ["command"]
+def get_tools_schema() -> list[dict[str, Any]]:
+    """
+    Get the tool schema definitions for Claude.
+
+    Returns:
+        List of tool definitions in Anthropic format
+    """
+    return [
+        {
+            "name": "execute_bash",
+            "description": (
+                "Execute a bash command to interact with the system. "
+                "Use this to list files (ls), search text (grep), read files (cat), "
+                "check system status, or run any standard shell command."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "The complete bash command to execute"
+                    }
+                },
+                "required": ["command"]
+            }
         }
-    }
-]
+    ]
